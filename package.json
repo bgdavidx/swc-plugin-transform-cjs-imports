@@ -1,5 +1,5 @@
 {
-    "name": "transform-cjs-imports",
+    "name": "@swc-plugins/transform-cjs-imports",
     "version": "0.1.0",
     "description": "",
     "author": "",
