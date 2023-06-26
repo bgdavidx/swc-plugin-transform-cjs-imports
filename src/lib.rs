@@ -2,6 +2,20 @@ use swc_common::{BytePos, DUMMY_SP};
 use swc_ecma_ast::*;
 use swc_core::ecma::atoms::JsWord;
 use swc_ecma_visit::{VisitMut, VisitMutWith};
+use swc_core::{
+    plugin::{
+        metadata::TransformPluginMetadataContextKind, plugin_transform,
+        proxies::TransformPluginProgramMetadata,
+    },
+};
+use serde::Deserialize;
+
+#[derive(Debug, Default, Clone, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct Config {
+    #[serde(default)]
+    pub modules: Vec<String>,
+}
 
 pub struct TransformVisitor {
     modules: Vec<String>,
@@ -10,6 +24,25 @@ pub struct TransformVisitor {
 pub fn transform_cjs_imports(modules: Vec<String>) -> impl VisitMut
 {
     TransformVisitor { modules }
+}
+
+#[plugin_transform]
+fn transform_cjs_imports_plugin(
+    mut program: Program,
+    data: TransformPluginProgramMetadata,
+) -> Program {
+    let config = serde_json::from_str::<Config>(
+        &data
+            .get_transform_plugin_config()
+            .expect("failed to get plugin config for transform-cjs-imports"),
+    )
+    .expect("invalid config for transform-cjs-imports");
+
+    program.visit_mut_with(&mut transform_cjs_imports(
+        config.modules
+    ));
+
+    program
 }
 
 impl VisitMut for TransformVisitor {
