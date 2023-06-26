@@ -2,8 +2,9 @@
 
 Have you ever had an error like this while trying to use ESM?
 
-``` */ import { promisifyAll } from "bluebird";
-             ^^^^^^^^^^^^
+```
+import { promisifyAll } from "bluebird";
+         ^^^^^^^^^^^^
 SyntaxError: Named export 'promisifyAll' not found. The requested module 'bluebird' is a CommonJS module, which may not support all module.exports as named exports.
 CommonJS modules can always be imported via the default export, for example using:
 
