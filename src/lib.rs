@@ -7,6 +7,11 @@ pub struct TransformVisitor {
     modules: Vec<String>,
 }
 
+pub fn transform_cjs_imports(modules: Vec<String>) -> impl VisitMut
+{
+    TransformVisitor { modules }
+}
+
 impl VisitMut for TransformVisitor {
     fn visit_mut_module(&mut self, n: &mut Module) {
         let mut new_body = vec![];
@@ -117,29 +122,4 @@ impl VisitMut for TransformVisitor {
         new_body.splice(import_end_index+1..import_end_index+1, extra_decls);
         n.body = new_body;
     }
-}
-
-use std::path::PathBuf;
-
-use swc_core::ecma::{transforms::testing::test_fixture, visit::as_folder};
-
-#[testing::fixture("tests/fixture/**/input.js")]
-fn fixture(input: PathBuf) {
-    let output = input.parent().unwrap().join("output.js");
-
-    test_fixture(
-        Default::default(),
-        &|_| as_folder(
-            TransformVisitor {
-                modules: vec![
-                    "lib".to_string(),
-                    "lib2".to_string(),
-                    "lib3".to_string()
-                ],
-            }
-        ),
-        &input,
-        &output,
-        Default::default(),
-    );
 }
