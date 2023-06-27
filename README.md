@@ -14,6 +14,12 @@ const { promisifyAll } = pkg;
 
 We did too, and didn't want to update every line in our codebase to support this, so we made this plugin.
 
+Install the plugin:
+
+```
+yarn add swc-plugin-transform-cjs-imports
+```
+
 Specify the list of modules that should be imported as CommonJS, and `swc-plugin-transform-cjs-imports` will automatically turn code such as:
 
 ```
@@ -38,7 +44,7 @@ For example, use this in your .swcrc to transform "bluebird":
     "experimental": {
       "keepImportAssertions": true,
       "plugins": [
-        ["transform-cjs-imports", {
+        ["swc-plugin-transform-cjs-imports", {
           "modules": [
             "bluebird"
           ]
