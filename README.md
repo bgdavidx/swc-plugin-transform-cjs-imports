@@ -28,4 +28,25 @@ import _bluebird from 'bluebird'
 const { promisifyAll } = _bluebird
 ```
 
-This plugin only has one parameter, "modules", which is a list of the CommonJS modules you want to transform. Enjoy!
+This plugin only has one parameter, "modules", which is a list of the CommonJS modules you want to transform. 
+
+For example, use this in your .swcrc to transform "bluebird":
+
+```
+{
+    ...
+    "experimental": {
+      "keepImportAssertions": true,
+      "plugins": [
+        ["transform-cjs-imports", {
+          "modules": [
+            "bluebird"
+          ]
+        }]
+      ]
+    }
+    ...
+}
+```
+
+Enjoy!
