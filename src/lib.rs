@@ -152,7 +152,10 @@ impl VisitMut for TransformVisitor {
             }
             new_body.push(item.clone());
         }
-        new_body.splice(import_end_index+1..import_end_index+1, extra_decls);
-        n.body = new_body;
+
+        if !extra_decls.is_empty() {
+            new_body.splice(import_end_index+1..import_end_index+1, extra_decls);
+            n.body = new_body;
+        }
     }
 }

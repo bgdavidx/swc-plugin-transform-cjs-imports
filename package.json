@@ -1,11 +1,11 @@
 {
     "name": "swc-plugin-transform-cjs-imports",
-    "version": "0.1.1",
+    "version": "0.1.4",
     "description": "",
     "author": "",
     "license": "ISC",
     "keywords": ["swc-plugin"],
-    "main": "target/wasm32-wasi/release/transform_cjs_imports.wasm",
+    "main": "target/wasm32-wasi/release/swc_plugin_transform_cjs_imports.wasm",
     "scripts": {
         "prepublishOnly": "cargo build-wasi --release"
     },
