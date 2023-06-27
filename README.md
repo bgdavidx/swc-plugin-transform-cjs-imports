@@ -42,7 +42,7 @@ For example, use this in your .swcrc to transform "bluebird":
 {
     ...
     "experimental": {
-      "keepImportAssertions": true,
+      ...
       "plugins": [
         ["swc-plugin-transform-cjs-imports", {
           "modules": [
