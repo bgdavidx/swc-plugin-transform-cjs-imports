@@ -10,20 +10,31 @@ use swc_core::{
 };
 use serde::Deserialize;
 
+fn default_as_false() -> bool {
+    false
+}
+
 #[derive(Debug, Default, Clone, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct Config {
     #[serde(default)]
     pub modules: Vec<String>,
+
+    #[serde(default = "default_as_false")]
+    pub treat_json_as_cjs: bool,
 }
 
 pub struct TransformVisitor {
     modules: Vec<String>,
+    treat_json_as_cjs: bool,
 }
 
-pub fn transform_cjs_imports(modules: Vec<String>) -> impl VisitMut
+pub fn transform_cjs_imports(config: Config) -> impl VisitMut
 {
-    TransformVisitor { modules }
+    TransformVisitor { 
+        modules: config.modules, 
+        treat_json_as_cjs: config.treat_json_as_cjs,
+    }
 }
 
 #[plugin_transform]
@@ -38,9 +49,7 @@ fn transform_cjs_imports_plugin(
     )
     .expect("invalid config for transform-cjs-imports");
 
-    program.visit_mut_with(&mut transform_cjs_imports(
-        config.modules
-    ));
+    program.visit_mut_with(&mut transform_cjs_imports(config));
 
     program
 }
@@ -57,8 +66,9 @@ impl VisitMut for TransformVisitor {
                 ModuleItem::ModuleDecl(ModuleDecl::Import(imp)) => {
                     import_end_index = i;
                     let src = imp.src.value.as_ref();
+                    let is_json = self.treat_json_as_cjs && src.ends_with(".json");
 
-                    if self.modules.contains(&src.to_string()) {
+                    if self.modules.contains(&src.to_string()) || is_json {
                         let mut default_ident = None;
                         let mut named_specifiers = vec![];
 
@@ -75,6 +85,22 @@ impl VisitMut for TransformVisitor {
                         }
 
                         if !named_specifiers.is_empty() {
+
+                            let mut import_assertion = None;
+
+                            if is_json {
+                                import_assertion = Some(Box::new(ObjectLit {
+                                    span: DUMMY_SP,
+                                    props: vec![PropOrSpread::Prop(Box::new(Prop::KeyValue(KeyValueProp {
+                                        key: PropName::Ident(Ident::new("type".into(), DUMMY_SP)),
+                                        value: Box::new(Expr::Lit(Lit::Str(Str {
+                                            span: DUMMY_SP,
+                                            value: "json".into(),
+                                            raw: None,
+                                        }))),
+                                    })))],
+                                }));
+                            }
                             
                             new_body.push(ModuleItem::ModuleDecl(ModuleDecl::Import(
                                 ImportDecl {
@@ -87,7 +113,7 @@ impl VisitMut for TransformVisitor {
                                     )],
                                     src: imp.src.clone(),
                                     type_only: false,
-                                    asserts: None,
+                                    asserts: import_assertion,
                                 },
                             )));
 
