@@ -21,6 +21,7 @@ fn fixture(input: PathBuf) {
                 "lib3".to_string()
             ],
             treat_json_as_cjs: true,
+            add_json_import_assertions: true,
           })
         ),
         &input,

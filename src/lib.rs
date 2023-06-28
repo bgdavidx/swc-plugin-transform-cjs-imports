@@ -22,11 +22,15 @@ pub struct Config {
 
     #[serde(default = "default_as_false")]
     pub treat_json_as_cjs: bool,
+
+    #[serde(default = "default_as_false")]
+    pub add_json_import_assertions: bool,
 }
 
 pub struct TransformVisitor {
     modules: Vec<String>,
     treat_json_as_cjs: bool,
+    add_json_import_assertions: bool,
 }
 
 pub fn transform_cjs_imports(config: Config) -> impl VisitMut
@@ -34,6 +38,7 @@ pub fn transform_cjs_imports(config: Config) -> impl VisitMut
     TransformVisitor { 
         modules: config.modules, 
         treat_json_as_cjs: config.treat_json_as_cjs,
+        add_json_import_assertions: config.add_json_import_assertions,
     }
 }
 
@@ -66,9 +71,24 @@ impl VisitMut for TransformVisitor {
                 ModuleItem::ModuleDecl(ModuleDecl::Import(imp)) => {
                     import_end_index = i;
                     let src = imp.src.value.as_ref();
-                    let is_json = self.treat_json_as_cjs && src.ends_with(".json");
+                    let mut import_assertion = None;
+                    let treat_json_as_cjs = self.treat_json_as_cjs && src.ends_with(".json");
 
-                    if self.modules.contains(&src.to_string()) || is_json {
+                    if self.add_json_import_assertions && treat_json_as_cjs {
+                        import_assertion = Some(Box::new(ObjectLit {
+                            span: DUMMY_SP,
+                            props: vec![PropOrSpread::Prop(Box::new(Prop::KeyValue(KeyValueProp {
+                                key: PropName::Ident(Ident::new("type".into(), DUMMY_SP)),
+                                value: Box::new(Expr::Lit(Lit::Str(Str {
+                                    span: DUMMY_SP,
+                                    value: "json".into(),
+                                    raw: None,
+                                }))),
+                            })))],
+                        }));
+                    }
+
+                    if self.modules.contains(&src.to_string()) || treat_json_as_cjs {
                         let mut default_ident = None;
                         let mut named_specifiers = vec![];
 
@@ -85,22 +105,6 @@ impl VisitMut for TransformVisitor {
                         }
 
                         if !named_specifiers.is_empty() {
-
-                            let mut import_assertion = None;
-
-                            if is_json {
-                                import_assertion = Some(Box::new(ObjectLit {
-                                    span: DUMMY_SP,
-                                    props: vec![PropOrSpread::Prop(Box::new(Prop::KeyValue(KeyValueProp {
-                                        key: PropName::Ident(Ident::new("type".into(), DUMMY_SP)),
-                                        value: Box::new(Expr::Lit(Lit::Str(Str {
-                                            span: DUMMY_SP,
-                                            value: "json".into(),
-                                            raw: None,
-                                        }))),
-                                    })))],
-                                }));
-                            }
                             
                             new_body.push(ModuleItem::ModuleDecl(ModuleDecl::Import(
                                 ImportDecl {
@@ -173,6 +177,13 @@ impl VisitMut for TransformVisitor {
                             continue;
                         }
                     }
+                    
+                    if let Some(import_assertion) = import_assertion {
+                        let mut clone_imp = imp.clone();
+                        clone_imp.asserts = Some(import_assertion);
+                        new_body.push(ModuleItem::ModuleDecl(ModuleDecl::Import(clone_imp)));
+                        continue;
+                    }
                 }
                 _ => {}
             }
@@ -181,7 +192,9 @@ impl VisitMut for TransformVisitor {
 
         if !extra_decls.is_empty() {
             new_body.splice(import_end_index+1..import_end_index+1, extra_decls);
-            n.body = new_body;
         }
+
+
+        n.body = new_body;
     }
 }
